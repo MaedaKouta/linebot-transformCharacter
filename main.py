@@ -2,6 +2,7 @@ from flask import Flask, request, abort
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
 from linebot.models import MessageEvent, TextMessage, TextSendMessage
+import requests
 import os
 
 app = Flask(__name__)
@@ -27,7 +28,20 @@ def callback():
 
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
-    line_bot_api.reply_message(event.reply_token, TextSendMessage(text=event.message.text))
+    headers = {
+        'Content-Type': 'application/json',
+    }
+    # gooApiに送信するデータを設定
+    text = '{"app_id":"<gooから入手したidを入力>",' \
+           '"request_id":"record003",' \
+           '"sentence":"' + event.message.text + '",' \
+           '"output_type":"hiragana"' \
+           '}'
+    response = requests.post('https://labs.goo.ne.jp/api/hiragana', headers=headers, data=text.encode("utf-8"))
+    response = response.json()
+    hiraganaText = response["converted"]
+
+    line_bot_api.reply_message(event.reply_token, TextSendMessage(text=hiraganaText))
 
 if __name__=="__main__":
     port = int(os.getenv("PORT", 5000))
